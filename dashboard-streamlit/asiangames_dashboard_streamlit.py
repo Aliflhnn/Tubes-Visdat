@@ -7,11 +7,11 @@ import json
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 
-# === Setup awal ===
+#Setup
 st.set_page_config(page_title="Asian Games Dashboard", layout="wide")
 st.title("🥇 Asian Games Medal Dashboard")
 
-# === Load data dari Google Spreadsheet ===
+#Load Data
 @st.cache_resource
 def load_data():
     scope = [
@@ -20,12 +20,12 @@ def load_data():
         "https://www.googleapis.com/auth/drive",
     ]
 
-    # Menggunakan kredensial dari st.secrets
+    #Credential
     creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
 
-    # URL spreadsheet
+    #Spreadsheet
     sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1VwqIW7xtGt-Sea6y3muzE00DVHUWzX0lA1ydqzuCXs0/edit?usp=sharing").sheet1
     df = get_as_dataframe(sheet).dropna(how="all")
     df['Country'] = df['NOC'].str.extract(r'^(.*?)\s\(')
@@ -34,7 +34,7 @@ def load_data():
 
 df, sheet = load_data()
 
-# === Sidebar Filter ===
+#Sidebar Filter
 st.sidebar.header("🎯 Filter Data")
 years = sorted(df['Year'].unique())
 countries = sorted(df['Country'].dropna().unique())
@@ -44,16 +44,16 @@ selected_countries = st.sidebar.multiselect("Pilih Negara", countries, default=c
 
 filtered_df = df[(df['Year'].isin(selected_years)) & (df['Country'].isin(selected_countries))]
 
-# === Edit Data Langsung ===
+#Edit Data
 st.subheader("📄 Edit Data Langsung")
 edited_df = st.data_editor(filtered_df, num_rows="dynamic", use_container_width=True, key="edit")
 
-# === Simpan Edit ===
+#Save Edit
 if st.button("💾 Simpan Edit"):
     set_with_dataframe(sheet, edited_df)
     st.success("Perubahan berhasil disimpan ke Google Spreadsheet!")
 
-# === Visualisasi 1: Bar Chart Total Medali ===
+# Visualisasi 1
 st.markdown("### 📊 Total Medali per Negara (Animasi per Tahun)")
 fig1 = px.bar(
     filtered_df,
@@ -65,7 +65,7 @@ fig1 = px.bar(
 )
 st.plotly_chart(fig1, use_container_width=True)
 
-# === Visualisasi 2: Line Chart ===
+# Visualisasi 2
 st.markdown("### 📈 Tren Medali Gold, Silver, Bronze per Negara")
 df_melt = filtered_df.melt(id_vars=['Year', 'Country'], value_vars=['Gold', 'Silver', 'Bronze'],
                            var_name='Medal', value_name='Count')
@@ -73,7 +73,7 @@ fig2 = px.line(df_melt, x='Year', y='Count', color='Country', line_dash='Medal',
                markers=True, title='Medal Count over the Years by Country')
 st.plotly_chart(fig2, use_container_width=True)
 
-# === Visualisasi 3: Top 3 Negara Total Medali ===
+# Visualisasi 3
 st.markdown("### 🏆 Top 3 Negara dengan Total Perolehan Medali Tertinggi")
 if not filtered_df.empty:
     total_medals = (
@@ -100,7 +100,7 @@ if not filtered_df.empty:
     fig.update_layout(xaxis_title='Negara', yaxis_title='Jumlah Medali', legend_title='Jenis Medali')
     st.plotly_chart(fig, use_container_width=True)
 
-# === Visualisasi 4: Heatmap ===
+# Visualisasi 4
 st.markdown("### 🔥 Heatmap Total Medali per Negara dan Tahun")
 heatmap_df = filtered_df.pivot_table(index='Country', columns='Year', values='Total', aggfunc='sum').fillna(0)
 fig3 = go.Figure(data=go.Heatmap(
@@ -112,7 +112,7 @@ fig3 = go.Figure(data=go.Heatmap(
 fig3.update_layout(title='Heatmap Total Medali per Negara dan Tahun', xaxis_title='Tahun', yaxis_title='Negara')
 st.plotly_chart(fig3, use_container_width=True)
 
-# === Visualisasi 5: Treemap ===
+# Visualisasi 5
 st.markdown("### 🌳 Treemap Dominasi Medali Negara - Tahun Terbaru")
 if not filtered_df.empty:
     latest_year_filtered = max(filtered_df['Year'].unique())
