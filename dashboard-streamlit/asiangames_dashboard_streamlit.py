@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import gspread
+import json
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -18,8 +19,13 @@ def load_data():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
+    # Menggunakan kredensial dari st.secrets
+    creds_dict = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
+
+    # URL spreadsheet
     sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1VwqIW7xtGt-Sea6y3muzE00DVHUWzX0lA1ydqzuCXs0/edit?usp=sharing").sheet1
     df = get_as_dataframe(sheet).dropna(how="all")
     df['Country'] = df['NOC'].str.extract(r'^(.*?)\s\(')
@@ -67,9 +73,8 @@ fig2 = px.line(df_melt, x='Year', y='Count', color='Country', line_dash='Medal',
                markers=True, title='Medal Count over the Years by Country')
 st.plotly_chart(fig2, use_container_width=True)
 
-# === Visualisasi 3: Top 3 Negara Total Medali (Rentang Tahun yang Difilter) ===
-st.markdown("### 🏆 Top 3 Negara dengan Total Perolehan Medali Tertinggi (Rentang Waktu Terfilter)")
-
+# === Visualisasi 3: Top 3 Negara Total Medali ===
+st.markdown("### 🏆 Top 3 Negara dengan Total Perolehan Medali Tertinggi")
 if not filtered_df.empty:
     total_medals = (
         filtered_df.groupby('Country')[['Gold', 'Silver', 'Bronze']]
@@ -89,18 +94,11 @@ if not filtered_df.empty:
         y='Count',
         color='Medal',
         barmode='group',
-        title='Top 3 Negara Berdasarkan Total Medali (Semua Tahun yang Difilter)',
+        title='Top 3 Negara Berdasarkan Total Medali',
         labels={'Count': 'Jumlah Medali', 'Country': 'Negara'}
     )
-
-    fig.update_layout(
-        xaxis_title='Negara',
-        yaxis_title='Jumlah Medali',
-        legend_title='Jenis Medali'
-    )
-
+    fig.update_layout(xaxis_title='Negara', yaxis_title='Jumlah Medali', legend_title='Jenis Medali')
     st.plotly_chart(fig, use_container_width=True)
-
 
 # === Visualisasi 4: Heatmap ===
 st.markdown("### 🔥 Heatmap Total Medali per Negara dan Tahun")
